@@ -350,6 +350,8 @@ if 'date_debut_time' not in st.session_state:
     st.session_state.date_debut_time = default_start_date.time()
 if 'date_fin_time' not in st.session_state:
     st.session_state.date_fin_time = default_end_date.time()
+if 'fix_now_clicked' not in st.session_state:
+    st.session_state.fix_now_clicked = False
 
 # Récupérer la liste des fichiers .txt disponibles via SFTP
 txt_files = get_txt_files_sftp()
@@ -426,7 +428,8 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
 
     # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 2 heures
     if st.button("Fix NOW"):
-        st.session_state.date_debut_time = (datetime.now()).time()
+        st.session_state.date_debut_time = (datetime.now() - timedelta(hours=2)).time()
+        st.session_state.fix_now_clicked = True
 
     # Sélecteurs de date et heure pour filtrer les points
     date_debut_date = st.date_input("Date de début", value=default_start_date.date())
@@ -469,10 +472,12 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     html(source_code, height=600)
 
     # Tracer la courbe de la batterie avec l'annotation
-    if st.session_state.points_txt1:
+    if (st.session_state.points_txt1 and not st.session_state.fix_now_clicked) or (
+            st.session_state.points_txt1 and st.session_state.fix_now_clicked and date_debut != default_start_date):
         fig1 = tracer_courbe_batterie(st.session_state.points_txt1, position_slider, date_debut, date_fin)
         st.plotly_chart(fig1)
-    if st.session_state.points_txt2:
+    if (st.session_state.points_txt2 and not st.session_state.fix_now_clicked) or (
+            st.session_state.points_txt2 and st.session_state.fix_now_clicked and date_debut != default_start_date):
         fig2 = tracer_courbe_batterie(st.session_state.points_txt2, position_slider, date_debut, date_fin)
         st.plotly_chart(fig2)
 
