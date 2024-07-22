@@ -130,8 +130,8 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
-def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filename1, filename2, display_gsm=True,
-                  display_sat=True, display_buffer=True,
+def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filename1=None, filename2=None,
+                  display_gsm=True, display_sat=True, display_buffer=True,
                   display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
                   color_rep_2='yellow', color_rep_3='orange', color_gpx='purple', diameter_gsm=2, diameter_sat=7,
                   diameter_buffer=2, diameter_rep=5, diameter_gpx=2, buffer_threshold=120, date_debut=None,
@@ -176,7 +176,7 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
     m = folium.Map(location=[0, 0], zoom_start=2, control_scale=True, max_zoom=18, min_zoom=2, scrollWheelZoom=True)
 
     # Fonction pour ajouter des points à la carte
-    def ajouter_points(points_txt, couleur, diametre, fichier):
+    def ajouter_points(points_txt, couleur, diametre, fichier=None):
         if points_txt:
             for i, point in enumerate(points_txt):
                 latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
@@ -223,7 +223,7 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
                             f"Différence: {diff} sec<br>"
                             f"{info}"
                             f"Alertes: {info_alertes}<br>"
-                            f"Fichier: {fichier}"
+                            f"Fichier: {fichier if fichier else 'N/A'}"
                         ),
                     ).add_to(m)
 
@@ -252,13 +252,15 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
                     f"Mode: {latest_point[5]}<br>"
                     f"Différence: {latest_point[7]} sec<br>"
                     f"Alertes: {latest_point[6]}<br>"
-                    f"Fichier: {fichier}"
+                    f"Fichier: {fichier if fichier else 'N/A'}"
                 )
             ).add_to(m)
 
-    # Ajouter les points des deux fichiers TXT
-    ajouter_points(points_txt1, color_gsm, diameter_gsm, filename1)
-    ajouter_points(points_txt2, color_sat, diameter_sat, filename2)
+    # Ajouter les points des fichiers TXT
+    if points_txt1:
+        ajouter_points(points_txt1, color_gsm, diameter_gsm, filename1)
+    if points_txt2:
+        ajouter_points(points_txt2, color_sat, diameter_sat, filename2)
 
     # Ajouter les points GPX à la carte
     if points_gpx:
@@ -357,21 +359,24 @@ if 'fix_now_clicked' not in st.session_state:
 txt_files = get_txt_files_sftp()
 
 # Afficher la liste des fichiers .txt et permettre à l'utilisateur de sélectionner deux fichiers
-selected_txt_files = st.multiselect("Sélectionnez deux fichiers TXT", txt_files, default=txt_files[:2])
+selected_txt_files = st.multiselect("Sélectionnez un ou deux fichiers TXT", txt_files, default=txt_files[:2])
 
 # Forcer la mise à jour des points lorsqu'un nouveau fichier est sélectionné
 if selected_txt_files and selected_txt_files != st.session_state.selected_txt_files:
     st.session_state.selected_txt_files = selected_txt_files
-    if len(selected_txt_files) == 2:
-        transport = paramiko.Transport((hostname, port))
-        transport.connect(username=username, password=password)
-        sftp = paramiko.SFTPClient.from_transport(transport)
+    transport = paramiko.Transport((hostname, port))
+    transport.connect(username=username, password=password)
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    if len(selected_txt_files) > 0:
         with sftp.file(f"data/{selected_txt_files[0]}", mode='r') as file:
             st.session_state.points_txt1 = lire_fichier_txt(file)
+    if len(selected_txt_files) > 1:
         with sftp.file(f"data/{selected_txt_files[1]}", mode='r') as file:
             st.session_state.points_txt2 = lire_fichier_txt(file)
-        sftp.close()
-        transport.close()
+    else:
+        st.session_state.points_txt2 = None
+    sftp.close()
+    transport.close()
 
 # Autorefresh toutes les 30 secondes
 st_autorefresh(interval=30 * 1000, key="datarefresh")
@@ -426,9 +431,9 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     # Définir le seuil de différence pour BUFFER
     buffer_threshold = st.number_input("Seuil de différence (en secondes) pour BUFFER", min_value=0, value=120)
 
-    # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 2 heures
+    # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 5 minutes
     if st.button("Fix NOW"):
-        st.session_state.date_debut_time = (datetime.now() - timedelta(minutes=2)).time()
+        st.session_state.date_debut_time = (datetime.now() - timedelta(minutes=5)).time()
         st.session_state.fix_now_clicked = True
 
     # Sélecteurs de date et heure pour filtrer les points
@@ -457,7 +462,8 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     # Génération de la carte avec les points et sauvegarde en HTML
     points_txt1, points_txt2, points_gpx = generer_carte(
         st.session_state.points_txt1, st.session_state.points_txt2, st.session_state.points_gpx, position_slider,
-        selected_txt_files[0], selected_txt_files[1],  # Passer les noms des fichiers ici
+        selected_txt_files[0] if len(selected_txt_files) > 0 else None,
+        selected_txt_files[1] if len(selected_txt_files) > 1 else None,  # Passer les noms des fichiers ici
         display_gsm, display_sat, display_buffer, display_rep,  # Ajouter display_rep ici
         color_gsm, color_sat, color_buffer, color_rep_2, color_rep_3, color_gpx,  # Ajouter color_rep ici
         diameter_gsm, diameter_sat, diameter_buffer, diameter_rep, diameter_gpx,  # Ajouter diameter_rep ici
@@ -472,12 +478,10 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     html(source_code, height=600)
 
     # Tracer la courbe de la batterie avec l'annotation
-    if (st.session_state.points_txt1 and not st.session_state.fix_now_clicked) or (
-            st.session_state.points_txt1 and st.session_state.fix_now_clicked and date_debut != default_start_date):
+    if st.session_state.points_txt1:
         fig1 = tracer_courbe_batterie(st.session_state.points_txt1, position_slider, date_debut, date_fin)
         st.plotly_chart(fig1)
-    if (st.session_state.points_txt2 and not st.session_state.fix_now_clicked) or (
-            st.session_state.points_txt2 and st.session_state.fix_now_clicked and date_debut != default_start_date):
+    if st.session_state.points_txt2:
         fig2 = tracer_courbe_batterie(st.session_state.points_txt2, position_slider, date_debut, date_fin)
         st.plotly_chart(fig2)
 
