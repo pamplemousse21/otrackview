@@ -231,7 +231,7 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
                     previous_point = points_txt[i - 1]
                     previous_lat, previous_lon = previous_point[0], previous_point[1]
                     time_diff = (reception_time - previous_point[8]).total_seconds()
-                    line_color = 'red' if time_diff > 60 else 'blue'
+                    line_color = 'red' if time_diff > 90 else 'blue'
                     folium.PolyLine(
                         locations=[(previous_lat, previous_lon), (latitude, longitude)],
                         color=line_color
