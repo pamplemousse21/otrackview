@@ -428,7 +428,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
 
     # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 2 heures
     if st.button("Fix NOW"):
-        st.session_state.date_debut_time = (datetime.now() - timedelta(minutes=5)).time()
+        st.session_state.date_debut_time = (datetime.now() - timedelta(minutes=2)).time()
         st.session_state.fix_now_clicked = True
 
     # Sélecteurs de date et heure pour filtrer les points
