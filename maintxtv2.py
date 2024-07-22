@@ -10,7 +10,7 @@ import paramiko
 from streamlit_autorefresh import st_autorefresh
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
-default_start_date = datetime(2024, 7, 19, 15, 45)  # Par exemple, 1er janvier 2023 à minuit
+default_start_date = datetime(2023, 1, 1, 0, 0)  # Par exemple, 1er janvier 2023 à minuit
 default_end_date = datetime.now()  # Date et heure actuelles
 
 # Informations de connexion SFTP
@@ -177,11 +177,19 @@ def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, dis
                 previous_point = points_txt[i - 1]
                 previous_lat, previous_lon = previous_point[0], previous_point[1]
                 time_diff = (reception_time - previous_point[8]).total_seconds()
-                line_color = 'red' if time_diff > 90 else 'blue'
+                line_color = 'red' if time_diff > 60 else 'blue'
                 folium.PolyLine(
                     locations=[(previous_lat, previous_lon), (latitude, longitude)],
                     color=line_color
                 ).add_to(m)
+
+        # Ajouter une icône pour le dernier point reçu
+        latest_point = points_txt[-1]
+        folium.Marker(
+            location=(latest_point[0], latest_point[1]),
+            icon=folium.Icon(color='green', icon='info-sign'),
+            popup="Dernier point reçu"
+        ).add_to(m)
 
     # Ajouter les points GPX à la carte
     if points_gpx:
