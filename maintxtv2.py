@@ -130,37 +130,43 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
-# Fonction pour générer et sauvegarder la carte en HTML
-def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, display_sat=True, display_buffer=True,
+def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, display_gsm=True, display_sat=True,
+                  display_buffer=True,
                   display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
                   color_rep_2='yellow', color_rep_3='orange', color_gpx='purple', diameter_gsm=2, diameter_sat=7,
                   diameter_buffer=2, diameter_rep=5, diameter_gpx=2, buffer_threshold=120, date_debut=None,
                   date_fin=None, filename="map.html"):
-    if not points_txt and not points_gpx:
+    if not points_txt1 and not points_txt2 and not points_gpx:
         return None
 
     # Filtrer les points par date
     if date_debut:
-        if points_txt:
-            points_txt = [p for p in points_txt if p[8] >= date_debut]
+        if points_txt1:
+            points_txt1 = [p for p in points_txt1 if p[8] >= date_debut]
+        if points_txt2:
+            points_txt2 = [p for p in points_txt2 if p[8] >= date_debut]
         if points_gpx:
             points_gpx = [p for p in points_gpx if p[3] >= date_debut]
     if date_fin:
-        if points_txt:
-            points_txt = [p for p in points_txt if p[8] <= date_fin]
+        if points_txt1:
+            points_txt1 = [p for p in points_txt1 if p[8] <= date_fin]
+        if points_txt2:
+            points_txt2 = [p for p in points_txt2 if p[8] <= date_fin]
         if points_gpx:
             points_gpx = [p for p in points_gpx if p[3] <= date_fin]
 
     # Initialiser les points pour centrer la carte
     all_points = []
-    if points_txt:
-        all_points.extend([(p[0], p[1]) for p in points_txt])
+    if points_txt1:
+        all_points.extend([(p[0], p[1]) for p in points_txt1])
+    if points_txt2:
+        all_points.extend([(p[0], p[1]) for p in points_txt2])
     if points_gpx:
         all_points.extend([(p[0], p[1]) for p in points_gpx])
 
     # Compter les points superposés
     point_counts = {}
-    for point in points_txt:
+    for point in points_txt1 + points_txt2:
         lat_long = (point[0], point[1])
         if lat_long not in point_counts:
             point_counts[lat_long] = 0
@@ -169,83 +175,88 @@ def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, dis
     # Créer une carte Folium avec des options de zoom personnalisées
     m = folium.Map(location=[0, 0], zoom_start=2, control_scale=True, max_zoom=18, min_zoom=2, scrollWheelZoom=True)
 
-    # Ajouter les points TXT à la carte
-    if points_txt:
-        for i, point in enumerate(points_txt):
-            latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
-            # Déterminer le mode de réception et la couleur
-            color = None
-            radius = None
-            info = ""
-            if diff > buffer_threshold and display_buffer:
-                reception_mode_str = "BUFFER"
-                color = color_buffer
-                radius = diameter_buffer
-            elif reception_mode == 1 and display_gsm:
-                reception_mode_str = "GSM"
-                color = color_gsm
-                radius = diameter_gsm
-            elif reception_mode == 0 and display_sat:
-                reception_mode_str = "SAT"
-                color = color_sat
-                radius = diameter_sat
-            if i > 0 and (latitude, longitude) == (points_txt[i - 1][0], points_txt[i - 1][1]) and display_rep:
-                reception_mode_str = "REPIT"
-                count = point_counts[(latitude, longitude)]
-                if count == 2:
-                    color = color_rep_2
-                elif count > 2:
-                    color = color_rep_3
-                radius = diameter_rep
-                info = f"Nombre de points superposés: {count}<br>"
-            if color is not None:
-                # Ajouter un marqueur pour chaque point avec une infobulle
-                folium.CircleMarker(
-                    location=(latitude, longitude),
-                    radius=radius,
-                    color=color,
-                    fill=True,
-                    fill_color=color,
-                    popup=(
-                        f"Latitude: {latitude}<br>"
-                        f"Longitude: {longitude}<br>"
-                        f"Niveau de Batterie: {battery_level}<br>"
-                        f"Réception: {timestamp_reception}<br>"
-                        f"Envoi: {timestamp_envoi}<br>"
-                        f"Mode: {reception_mode_str}<br>"
-                        f"Différence: {diff} sec<br>"
-                        f"{info}"
-                        f"Alertes: {info_alertes}"
-                    ),
-                ).add_to(m)
+    # Fonction pour ajouter des points à la carte
+    def ajouter_points(points_txt, couleur, diametre):
+        if points_txt:
+            for i, point in enumerate(points_txt):
+                latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
+                # Déterminer le mode de réception et la couleur
+                color = None
+                radius = None
+                info = ""
+                if diff > buffer_threshold and display_buffer:
+                    reception_mode_str = "BUFFER"
+                    color = color_buffer
+                    radius = diameter_buffer
+                elif reception_mode == 1 and display_gsm:
+                    reception_mode_str = "GSM"
+                    color = color_gsm
+                    radius = diameter_gsm
+                elif reception_mode == 0 and display_sat:
+                    reception_mode_str = "SAT"
+                    color = color_sat
+                    radius = diameter_sat
+                if i > 0 and (latitude, longitude) == (points_txt[i - 1][0], points_txt[i - 1][1]) and display_rep:
+                    reception_mode_str = "REPIT"
+                    count = point_counts[(latitude, longitude)]
+                    if count == 2:
+                        color = color_rep_2
+                    elif count > 2:
+                        color = color_rep_3
+                    radius = diameter_rep
+                    info = f"Nombre de points superposés: {count}<br>"
+                if color is not None:
+                    # Ajouter un marqueur pour chaque point avec une infobulle
+                    folium.CircleMarker(
+                        location=(latitude, longitude),
+                        radius=radius,
+                        color=color,
+                        fill=True,
+                        fill_color=color,
+                        popup=(
+                            f"Latitude: {latitude}<br>"
+                            f"Longitude: {longitude}<br>"
+                            f"Niveau de Batterie: {battery_level}<br>"
+                            f"Réception: {timestamp_reception}<br>"
+                            f"Envoi: {timestamp_envoi}<br>"
+                            f"Mode: {reception_mode_str}<br>"
+                            f"Différence: {diff} sec<br>"
+                            f"{info}"
+                            f"Alertes: {info_alertes}"
+                        ),
+                    ).add_to(m)
 
-            # Ajouter des lignes entre les points
-            if i > 0:
-                previous_point = points_txt[i - 1]
-                previous_lat, previous_lon = previous_point[0], previous_point[1]
-                time_diff = (reception_time - previous_point[8]).total_seconds()
-                line_color = 'red' if time_diff > 60 else 'blue'
-                folium.PolyLine(
-                    locations=[(previous_lat, previous_lon), (latitude, longitude)],
-                    color=line_color
-                ).add_to(m)
+                # Ajouter des lignes entre les points
+                if i > 0:
+                    previous_point = points_txt[i - 1]
+                    previous_lat, previous_lon = previous_point[0], previous_point[1]
+                    time_diff = (reception_time - previous_point[8]).total_seconds()
+                    line_color = 'red' if time_diff > 60 else 'blue'
+                    folium.PolyLine(
+                        locations=[(previous_lat, previous_lon), (latitude, longitude)],
+                        color=line_color
+                    ).add_to(m)
 
-        # Ajouter une icône pour le dernier point reçu
-        latest_point = points_txt[-1]
-        folium.Marker(
-            location=(latest_point[0], latest_point[1]),
-            icon=folium.Icon(color='green', icon='info-sign'),
-            popup=(
-                f"Latitude: {latest_point[0]}<br>"
-                f"Longitude: {latest_point[1]}<br>"
-                f"Niveau de Batterie: {latest_point[2]}<br>"
-                f"Réception: {latest_point[3]}<br>"
-                f"Envoi: {latest_point[4]}<br>"
-                f"Mode: {latest_point[5]}<br>"
-                f"Différence: {latest_point[7]} sec<br>"
-                f"Alertes: {latest_point[6]}"
-            )
-        ).add_to(m)
+            # Ajouter une icône pour le dernier point reçu
+            latest_point = points_txt[-1]
+            folium.Marker(
+                location=(latest_point[0], latest_point[1]),
+                icon=folium.Icon(color='green', icon='info-sign'),
+                popup=(
+                    f"Latitude: {latest_point[0]}<br>"
+                    f"Longitude: {latest_point[1]}<br>"
+                    f"Niveau de Batterie: {latest_point[2]}<br>"
+                    f"Réception: {latest_point[3]}<br>"
+                    f"Envoi: {latest_point[4]}<br>"
+                    f"Mode: {latest_point[5]}<br>"
+                    f"Différence: {latest_point[7]} sec<br>"
+                    f"Alertes: {latest_point[6]}"
+                )
+            ).add_to(m)
+
+    # Ajouter les points des deux fichiers TXT
+    ajouter_points(points_txt1, color_gsm, diameter_gsm)
+    ajouter_points(points_txt2, color_sat, diameter_sat)
 
     # Ajouter les points GPX à la carte
     if points_gpx:
@@ -283,7 +294,7 @@ def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, dis
     # Sauvegarder la carte en HTML
     m.save(filename)
 
-    return points_txt, points_gpx
+    return points_txt1, points_txt2, points_gpx
 
 
 # Fonction pour tracer la courbe de la batterie avec l'annotation et filtrer par date
@@ -325,12 +336,14 @@ st.set_page_config(page_title="Carte OSM avec Données TXT et GPX et Streamlit",
 st.title("Carte OpenStreetMap avec Données TXT et GPX et Streamlit")
 
 # Utiliser les variables de session pour stocker les points
-if 'points_txt' not in st.session_state:
-    st.session_state.points_txt = None
+if 'points_txt1' not in st.session_state:
+    st.session_state.points_txt1 = None
+if 'points_txt2' not in st.session_state:
+    st.session_state.points_txt2 = None
 if 'points_gpx' not in st.session_state:
     st.session_state.points_gpx = None
-if 'selected_txt_file' not in st.session_state:
-    st.session_state.selected_txt_file = None
+if 'selected_txt_files' not in st.session_state:
+    st.session_state.selected_txt_files = None
 if 'date_debut_time' not in st.session_state:
     st.session_state.date_debut_time = default_start_date.time()
 if 'date_fin_time' not in st.session_state:
@@ -339,30 +352,37 @@ if 'date_fin_time' not in st.session_state:
 # Récupérer la liste des fichiers .txt disponibles via SFTP
 txt_files = get_txt_files_sftp()
 
-# Afficher la liste des fichiers .txt et permettre à l'utilisateur de sélectionner un fichier
-selected_txt_file = st.selectbox("Sélectionnez un fichier TXT", txt_files)
+# Afficher la liste des fichiers .txt et permettre à l'utilisateur de sélectionner deux fichiers
+selected_txt_files = st.multiselect("Sélectionnez deux fichiers TXT", txt_files, default=txt_files[:2])
 
 # Forcer la mise à jour des points lorsqu'un nouveau fichier est sélectionné
-if selected_txt_file and selected_txt_file != st.session_state.selected_txt_file:
-    st.session_state.selected_txt_file = selected_txt_file
-    transport = paramiko.Transport((hostname, port))
-    transport.connect(username=username, password=password)
-    sftp = paramiko.SFTPClient.from_transport(transport)
-    with sftp.file(f"data/{selected_txt_file}", mode='r') as file:
-        st.session_state.points_txt = lire_fichier_txt(file)
-    sftp.close()
-    transport.close()
+if selected_txt_files and selected_txt_files != st.session_state.selected_txt_files:
+    st.session_state.selected_txt_files = selected_txt_files
+    if len(selected_txt_files) == 2:
+        transport = paramiko.Transport((hostname, port))
+        transport.connect(username=username, password=password)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        with sftp.file(f"data/{selected_txt_files[0]}", mode='r') as file:
+            st.session_state.points_txt1 = lire_fichier_txt(file)
+        with sftp.file(f"data/{selected_txt_files[1]}", mode='r') as file:
+            st.session_state.points_txt2 = lire_fichier_txt(file)
+        sftp.close()
+        transport.close()
 
 # Autorefresh toutes les 30 secondes
 st_autorefresh(interval=30 * 1000, key="datarefresh")
 
-# Recharger les données du fichier TXT sélectionné
-if selected_txt_file:
+# Recharger les données des fichiers TXT sélectionnés
+if selected_txt_files:
     transport = paramiko.Transport((hostname, port))
     transport.connect(username=username, password=password)
     sftp = paramiko.SFTPClient.from_transport(transport)
-    with sftp.file(f"data/{selected_txt_file}", mode='r') as file:
-        st.session_state.points_txt = lire_fichier_txt(file)
+    if len(selected_txt_files) > 0:
+        with sftp.file(f"data/{selected_txt_files[0]}", mode='r') as file:
+            st.session_state.points_txt1 = lire_fichier_txt(file)
+    if len(selected_txt_files) > 1:
+        with sftp.file(f"data/{selected_txt_files[1]}", mode='r') as file:
+            st.session_state.points_txt2 = lire_fichier_txt(file)
     sftp.close()
     transport.close()
 
@@ -373,7 +393,7 @@ if uploaded_file_gpx is not None:
     st.session_state.points_gpx = lire_fichier_gpx(uploaded_file_gpx)
 
 # Vérifier s'il y a des points à afficher
-if st.session_state.points_txt is not None or st.session_state.points_gpx is not None:
+if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is not None or st.session_state.points_gpx is not None:
     # Options d'affichage
     col1, col2, col3 = st.columns(3)
 
@@ -416,18 +436,19 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
     date_fin = datetime.combine(date_fin_date, date_fin_time)
 
     # Vérifier si les listes ne sont pas None avant de calculer leur longueur
-    points_txt_length = len(st.session_state.points_txt) if st.session_state.points_txt else 0
+    points_txt1_length = len(st.session_state.points_txt1) if st.session_state.points_txt1 else 0
+    points_txt2_length = len(st.session_state.points_txt2) if st.session_state.points_txt2 else 0
     points_gpx_length = len(st.session_state.points_gpx) if st.session_state.points_gpx else 0
-    total_points = points_txt_length + points_gpx_length
+    total_points = points_txt1_length + points_txt2_length + points_gpx_length
 
     # Curseur pour naviguer parmi les points
     position_slider = st.slider("Naviguer parmi les points", min_value=0,
                                 max_value=total_points - 1 if total_points > 0 else 0, value=0)
 
     # Génération de la carte avec les points et sauvegarde en HTML
-    points_txt, points_gpx = generer_carte(
-        st.session_state.points_txt, st.session_state.points_gpx, position_slider, display_gsm, display_sat,
-        display_buffer, display_rep,  # Ajouter display_rep ici
+    points_txt1, points_txt2, points_gpx = generer_carte(
+        st.session_state.points_txt1, st.session_state.points_txt2, st.session_state.points_gpx, position_slider,
+        display_gsm, display_sat, display_buffer, display_rep,  # Ajouter display_rep ici
         color_gsm, color_sat, color_buffer, color_rep_2, color_rep_3, color_gpx,  # Ajouter color_rep ici
         diameter_gsm, diameter_sat, diameter_buffer, diameter_rep, diameter_gpx,  # Ajouter diameter_rep ici
         buffer_threshold, date_debut, date_fin, filename="map.html"
@@ -441,20 +462,32 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
     html(source_code, height=600)
 
     # Tracer la courbe de la batterie avec l'annotation
-    if st.session_state.points_txt:
-        fig = tracer_courbe_batterie(st.session_state.points_txt, position_slider, date_debut, date_fin)
-        st.plotly_chart(fig)
+    if st.session_state.points_txt1:
+        fig1 = tracer_courbe_batterie(st.session_state.points_txt1, position_slider, date_debut, date_fin)
+        st.plotly_chart(fig1)
+    if st.session_state.points_txt2:
+        fig2 = tracer_courbe_batterie(st.session_state.points_txt2, position_slider, date_debut, date_fin)
+        st.plotly_chart(fig2)
 
     # Afficher les statistiques en bas de la page
-    if st.session_state.points_txt:
-        counts, last_point_time = compter_points_par_type(st.session_state.points_txt, date_debut, date_fin)
-        st.markdown("### Statistiques des Points")
-        st.markdown(f"- Nombre de points GSM : **{counts['GSM']}**")
-        st.markdown(f"- Nombre de points SAT : **{counts['SAT']}**")
-        st.markdown(f"- Nombre de points BUFFER : **{counts['BUFFER']}**")
-        st.markdown(f"- Nombre de points REPIT (2 points) : **{counts['REPIT_2']}**")
-        st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts['REPIT_3']}**")
-        st.markdown(f"- Heure du dernier point : **{last_point_time}**")
+    if st.session_state.points_txt1:
+        counts1, last_point_time1 = compter_points_par_type(st.session_state.points_txt1, date_debut, date_fin)
+        st.markdown("### Statistiques des Points du Fichier 1")
+        st.markdown(f"- Nombre de points GSM : **{counts1['GSM']}**")
+        st.markdown(f"- Nombre de points SAT : **{counts1['SAT']}**")
+        st.markdown(f"- Nombre de points BUFFER : **{counts1['BUFFER']}**")
+        st.markdown(f"- Nombre de points REPIT (2 points) : **{counts1['REPIT_2']}**")
+        st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts1['REPIT_3']}**")
+        st.markdown(f"- Heure du dernier point : **{last_point_time1}**")
+    if st.session_state.points_txt2:
+        counts2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
+        st.markdown("### Statistiques des Points du Fichier 2")
+        st.markdown(f"- Nombre de points GSM : **{counts2['GSM']}**")
+        st.markdown(f"- Nombre de points SAT : **{counts2['SAT']}**")
+        st.markdown(f"- Nombre de points BUFFER : **{counts2['BUFFER']}**")
+        st.markdown(f"- Nombre de points REPIT (2 points) : **{counts2['REPIT_2']}**")
+        st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
+        st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
