@@ -454,7 +454,7 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
         st.markdown(f"- Nombre de points BUFFER : **{counts['BUFFER']}**")
         st.markdown(f"- Nombre de points REPIT (2 points) : **{counts['REPIT_2']}**")
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts['REPIT_3']}**")
-        st.markdown(f"- Heure du dernier point : **{last_point_time}**
+        st.markdown(f"- Heure du dernier point : **{last_point_time}**")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
