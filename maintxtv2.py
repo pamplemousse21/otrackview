@@ -506,8 +506,8 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts1['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time1}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees1:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3))}**")
-        st.markdown(f"- perte (%) : **{(minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)))/minutes_ecoulees1*100}** %")
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)):.0f}**")
+        st.markdown(f"- perte (%) : **{(minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)))/minutes_ecoulees1*100:.1f}** %")
     if st.session_state.points_txt2:
         counts2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
         minutes_ecoulees2 = calculer_minutes_ecoulees(date_debut, last_point_time2)
@@ -520,8 +520,8 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.2f}**")
-        st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100:.2f}** %")
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.0f}**")
+        st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100:.1f}** %")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
