@@ -10,7 +10,7 @@ import paramiko
 from streamlit_autorefresh import st_autorefresh
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
-default_start_date = datetime(2024, 7, 22, 0, 0)  # Par exemple, 1er janvier 2023 à minuit
+default_start_date = datetime(2024, 7, 22, 1, 0)  # Par exemple, 1er janvier 2023 à minuit
 default_end_date = datetime.now()  # Date et heure actuelles
 
 # Informations de connexion SFTP
