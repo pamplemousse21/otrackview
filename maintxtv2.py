@@ -130,8 +130,8 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
-def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, display_gsm=True, display_sat=True,
-                  display_buffer=True,
+def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filename1, filename2, display_gsm=True,
+                  display_sat=True, display_buffer=True,
                   display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
                   color_rep_2='yellow', color_rep_3='orange', color_gpx='purple', diameter_gsm=2, diameter_sat=7,
                   diameter_buffer=2, diameter_rep=5, diameter_gpx=2, buffer_threshold=120, date_debut=None,
@@ -176,7 +176,7 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, display
     m = folium.Map(location=[0, 0], zoom_start=2, control_scale=True, max_zoom=18, min_zoom=2, scrollWheelZoom=True)
 
     # Fonction pour ajouter des points à la carte
-    def ajouter_points(points_txt, couleur, diametre):
+    def ajouter_points(points_txt, couleur, diametre, fichier):
         if points_txt:
             for i, point in enumerate(points_txt):
                 latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
@@ -222,7 +222,8 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, display
                             f"Mode: {reception_mode_str}<br>"
                             f"Différence: {diff} sec<br>"
                             f"{info}"
-                            f"Alertes: {info_alertes}"
+                            f"Alertes: {info_alertes}<br>"
+                            f"Fichier: {fichier}"
                         ),
                     ).add_to(m)
 
@@ -250,13 +251,14 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, display
                     f"Envoi: {latest_point[4]}<br>"
                     f"Mode: {latest_point[5]}<br>"
                     f"Différence: {latest_point[7]} sec<br>"
-                    f"Alertes: {latest_point[6]}"
+                    f"Alertes: {latest_point[6]}<br>"
+                    f"Fichier: {fichier}"
                 )
             ).add_to(m)
 
     # Ajouter les points des deux fichiers TXT
-    ajouter_points(points_txt1, color_gsm, diameter_gsm)
-    ajouter_points(points_txt2, color_sat, diameter_sat)
+    ajouter_points(points_txt1, color_gsm, diameter_gsm, filename1)
+    ajouter_points(points_txt2, color_sat, diameter_sat, filename2)
 
     # Ajouter les points GPX à la carte
     if points_gpx:
@@ -452,6 +454,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     # Génération de la carte avec les points et sauvegarde en HTML
     points_txt1, points_txt2, points_gpx = generer_carte(
         st.session_state.points_txt1, st.session_state.points_txt2, st.session_state.points_gpx, position_slider,
+        selected_txt_files[0], selected_txt_files[1],  # Passer les noms des fichiers ici
         display_gsm, display_sat, display_buffer, display_rep,  # Ajouter display_rep ici
         color_gsm, color_sat, color_buffer, color_rep_2, color_rep_3, color_gpx,  # Ajouter color_rep ici
         diameter_gsm, diameter_sat, diameter_buffer, diameter_rep, diameter_gpx,  # Ajouter diameter_rep ici
@@ -476,7 +479,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     # Afficher les statistiques en bas de la page
     if st.session_state.points_txt1:
         counts1, last_point_time1 = compter_points_par_type(st.session_state.points_txt1, date_debut, date_fin)
-        st.markdown("### Statistiques des Points du Fichier 1")
+        st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[0]}")
         st.markdown(f"- Nombre de points GSM : **{counts1['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts1['SAT']}**")
         st.markdown(f"- Nombre de points BUFFER : **{counts1['BUFFER']}**")
@@ -485,7 +488,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Heure du dernier point : **{last_point_time1}**")
     if st.session_state.points_txt2:
         counts2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
-        st.markdown("### Statistiques des Points du Fichier 2")
+        st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[1]}")
         st.markdown(f"- Nombre de points GSM : **{counts2['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts2['SAT']}**")
         st.markdown(f"- Nombre de points BUFFER : **{counts2['BUFFER']}**")
