@@ -10,7 +10,7 @@ import paramiko
 from streamlit_autorefresh import st_autorefresh
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
-default_start_date = datetime(2024, 7, 22, 1, 0)  # Par exemple, 1er janvier 2023 à minuit
+default_start_date = datetime.now().replace(hour=0, minute=0)  # Par exemple, 1er janvier 2023 à minuit
 default_end_date = datetime.now()  # Date et heure actuelles
 
 # Informations de connexion SFTP
@@ -81,6 +81,50 @@ def lire_fichier_gpx(file):
             for point in segment.points:
                 points.append((point.latitude, point.longitude, point.elevation, point.time))
     return points
+
+
+# Fonction pour compter les points par type
+def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
+    counts = {
+        "GSM": 0,
+        "SAT": 0,
+        "BUFFER": 0,
+        "REPIT_2": 0,
+        "REPIT_3": 0
+    }
+
+    if date_debut:
+        points_txt = [p for p in points_txt if p[8] >= date_debut]
+    if date_fin:
+        points_txt = [p for p in points_txt if p[8] <= date_fin]
+
+    point_counts = {}
+    for point in points_txt:
+        lat_long = (point[0], point[1])
+        if lat_long not in point_counts:
+            point_counts[lat_long] = 0
+        point_counts[lat_long] += 1
+
+    for i, point in enumerate(points_txt):
+        diff = point[7]
+        reception_mode = point[5]
+        lat_long = (point[0], point[1])
+        count = point_counts[lat_long]
+
+        if diff > buffer_threshold:
+            counts["BUFFER"] += 1
+        elif reception_mode == 1:
+            counts["GSM"] += 1
+        elif reception_mode == 0:
+            counts["SAT"] += 1
+
+        if i > 0 and lat_long == (points_txt[i - 1][0], points_txt[i - 1][1]):
+            if count == 2:
+                counts["REPIT_2"] += 1
+            elif count > 2:
+                counts["REPIT_3"] += 1
+
+    return counts
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
@@ -381,5 +425,16 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
     if st.session_state.points_txt:
         fig = tracer_courbe_batterie(st.session_state.points_txt, position_slider, date_debut, date_fin)
         st.plotly_chart(fig)
+
+    # Afficher les statistiques en bas de la page
+    if st.session_state.points_txt:
+        counts = compter_points_par_type(st.session_state.points_txt, date_debut, date_fin)
+        st.markdown("### Statistiques des Points")
+        st.markdown(f"- Nombre de points GSM : **{counts['GSM']}**")
+        st.markdown(f"- Nombre de points SAT : **{counts['SAT']}**")
+        st.markdown(f"- Nombre de points BUFFER : **{counts['BUFFER']}**")
+        st.markdown(f"- Nombre de points REPIT (2 points) : **{counts['REPIT_2']}**")
+        st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts['REPIT_3']}**")
+
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
