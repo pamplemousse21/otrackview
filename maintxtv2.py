@@ -422,6 +422,10 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     # Définir le seuil de différence pour BUFFER
     buffer_threshold = st.number_input("Seuil de différence (en secondes) pour BUFFER", min_value=0, value=120)
 
+    # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 2 heures
+    if st.button("Fix NOW"):
+        st.session_state.date_debut_time = (datetime.now() - timedelta(hours=2)).time()
+
     # Sélecteurs de date et heure pour filtrer les points
     date_debut_date = st.date_input("Date de début", value=default_start_date.date())
     date_debut_time = st.time_input("Heure de début", value=st.session_state.date_debut_time)
