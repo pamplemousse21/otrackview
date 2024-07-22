@@ -1,0 +1,6 @@
+streamlit
+folium
+plotly
+gpxpy
+paramiko
+streamlit-autorefresh
