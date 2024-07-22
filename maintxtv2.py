@@ -514,7 +514,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{points_perdus2}**")
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_2']/3))}**")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
