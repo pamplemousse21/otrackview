@@ -11,7 +11,7 @@ from streamlit_autorefresh import st_autorefresh
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
 default_start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-default_end_date = (datetime.now()+ timedelta(hour=2))  # Date et heure actuelles
+default_end_date = datetime.now() + timedelta(hours=2)  # Date et heure actuelles
 
 # Informations de connexion SFTP
 hostname = '51.83.73.60'
