@@ -332,6 +332,10 @@ def tracer_courbe_batterie(points_txt, position_slider, date_debut=None, date_fi
 
 def calculer_minutes_ecoulees(date_debut, date_fin):
     return (date_fin - date_debut).total_seconds() / 60
+
+def calculer_points_perdus(minutes_ecoulees, nombre_points):
+    return minutes_ecoulees - nombre_points
+
 # Configure la page
 st.set_page_config(page_title="Carte OSM avec Données TXT et GPX et Streamlit", layout="wide")
 
@@ -488,6 +492,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     if st.session_state.points_txt1:
         counts1, last_point_time1 = compter_points_par_type(st.session_state.points_txt1, date_debut, date_fin)
         minutes_ecoulees1 = calculer_minutes_ecoulees(date_debut, last_point_time1)
+        points_perdus1 = calculer_points_perdus(minutes_ecoulees1, len(st.session_state.points_txt1))
         st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[0]}")
         st.markdown(f"- Nombre de points GSM : **{counts1['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts1['SAT']}**")
@@ -496,9 +501,12 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts1['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time1}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees1:.2f}**")
+        st.markdown(f"- Nombre de points perdus : **{points_perdus1:.2f}**")
+
     if st.session_state.points_txt2:
         counts2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
         minutes_ecoulees2 = calculer_minutes_ecoulees(date_debut, last_point_time2)
+        points_perdus2 = calculer_points_perdus(minutes_ecoulees2, len(st.session_state.points_txt2))
         st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[1]}")
         st.markdown(f"- Nombre de points GSM : **{counts2['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts2['SAT']}**")
@@ -507,6 +515,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
+        st.markdown(f"- Nombre de points perdus : **{points_perdus2:.2f}**")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
