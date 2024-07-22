@@ -10,7 +10,7 @@ import paramiko
 from streamlit_autorefresh import st_autorefresh
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
-default_start_date = datetime.now().replace(hour=0, minute=0)  # Par exemple, 1er janvier 2023 à minuit
+default_start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 default_end_date = datetime.now()  # Date et heure actuelles
 
 # Informations de connexion SFTP
@@ -319,6 +319,10 @@ if 'points_gpx' not in st.session_state:
     st.session_state.points_gpx = None
 if 'selected_txt_file' not in st.session_state:
     st.session_state.selected_txt_file = None
+if 'date_debut_time' not in st.session_state:
+    st.session_state.date_debut_time = default_start_date.time()
+if 'date_fin_time' not in st.session_state:
+    st.session_state.date_fin_time = default_end_date.time()
 
 # Récupérer la liste des fichiers .txt disponibles via SFTP
 txt_files = get_txt_files_sftp()
@@ -388,9 +392,12 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
 
     # Sélecteurs de date et heure pour filtrer les points
     date_debut_date = st.date_input("Date de début", value=default_start_date.date())
-    date_debut_time = st.time_input("Heure de début", value=default_start_date.time())
+    date_debut_time = st.time_input("Heure de début", value=st.session_state.date_debut_time)
+    st.session_state.date_debut_time = date_debut_time
+
     date_fin_date = st.date_input("Date de fin", value=default_end_date.date())
-    date_fin_time = st.time_input("Heure de fin", value=default_end_date.time())
+    date_fin_time = st.time_input("Heure de fin", value=st.session_state.date_fin_time)
+    st.session_state.date_fin_time = date_fin_time
 
     # Combine les dates et les heures en objets datetime
     date_debut = datetime.combine(date_debut_date, date_debut_time)
