@@ -124,9 +124,12 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
             elif count > 2:
                 counts["REPIT_3"] += 1
 
-    return counts
+    last_point_time = points_txt[-1][8] if points_txt else None
+
+    return counts, last_point_time
 
 
+# Fonction pour générer et sauvegarder la carte en HTML
 # Fonction pour générer et sauvegarder la carte en HTML
 def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, display_sat=True, display_buffer=True,
                   display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
@@ -232,7 +235,16 @@ def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, dis
         folium.Marker(
             location=(latest_point[0], latest_point[1]),
             icon=folium.Icon(color='green', icon='info-sign'),
-            popup="Dernier point reçu"
+            popup=(
+                f"Latitude: {latest_point[0]}<br>"
+                f"Longitude: {latest_point[1]}<br>"
+                f"Niveau de Batterie: {latest_point[2]}<br>"
+                f"Réception: {latest_point[3]}<br>"
+                f"Envoi: {latest_point[4]}<br>"
+                f"Mode: {latest_point[5]}<br>"
+                f"Différence: {latest_point[7]} sec<br>"
+                f"Alertes: {latest_point[6]}"
+            )
         ).add_to(m)
 
     # Ajouter les points GPX à la carte
@@ -435,13 +447,14 @@ if st.session_state.points_txt is not None or st.session_state.points_gpx is not
 
     # Afficher les statistiques en bas de la page
     if st.session_state.points_txt:
-        counts = compter_points_par_type(st.session_state.points_txt, date_debut, date_fin)
+        counts, last_point_time = compter_points_par_type(st.session_state.points_txt, date_debut, date_fin)
         st.markdown("### Statistiques des Points")
         st.markdown(f"- Nombre de points GSM : **{counts['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts['SAT']}**")
         st.markdown(f"- Nombre de points BUFFER : **{counts['BUFFER']}**")
         st.markdown(f"- Nombre de points REPIT (2 points) : **{counts['REPIT_2']}**")
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts['REPIT_3']}**")
+        st.markdown(f"- Heure du dernier point : **{last_point_time}**
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
