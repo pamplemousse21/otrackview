@@ -439,6 +439,11 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.session_state.date_debut_time = (datetime.now() - timedelta(minutes=5)).time()
         st.session_state.fix_now_clicked = True
 
+    # Bouton "Fix NOW" pour mettre l'heure de début à l'heure actuelle moins 5 minutes
+    if st.button("Fix NOW-2"):
+        st.session_state.date_debut_time = (datetime.now() - timedelta(hours=2,minutes=5)).time()
+        st.session_state.fix_now_clicked = True
+
     # Sélecteurs de date et heure pour filtrer les points
     date_debut_date = st.date_input("Date de début", value=default_start_date.date())
     date_debut_time = st.time_input("Heure de début", value=st.session_state.date_debut_time)
@@ -515,8 +520,8 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3))}**")
-        st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100}** %")
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.2f}**")
+        st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100:.2f}** %")
 
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
