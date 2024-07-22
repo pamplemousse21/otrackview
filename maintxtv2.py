@@ -334,7 +334,7 @@ def calculer_minutes_ecoulees(date_debut, date_fin):
     return (date_fin - date_debut).total_seconds() / 60
 
 def calculer_points_perdus(minutes_ecoulees, nombre_de_points):
-    return max(0, minutes_ecoulees - nombre_de_points)
+    return minutes_ecoulees - nombre_de_points
 
 # Configure la page
 st.set_page_config(page_title="Carte OSM avec Données TXT et GPX et Streamlit", layout="wide")
