@@ -1,0 +1,377 @@
+import streamlit as st
+import folium
+import plotly.express as px
+import plotly.graph_objects as go
+import gpxpy
+import gpxpy.gpx
+from datetime import datetime, timedelta
+from streamlit.components.v1 import html
+import paramiko
+from streamlit_autorefresh import st_autorefresh
+
+# Définir les valeurs par défaut pour la date et l'heure de filtrage
+default_start_date = datetime(2024, 7, 19, 15, 45)  # Par exemple, 1er janvier 2023 à minuit
+default_end_date = datetime.now()  # Date et heure actuelles
+
+# Informations de connexion SFTP
+hostname = '51.83.73.60'
+port = 55001
+username = 'kevin'
+password = 'KevinKevinCitron44!!'
+
+
+# Fonction pour récupérer la liste des fichiers .txt via SFTP
+def get_txt_files_sftp():
+    file_list = []
+    transport = paramiko.Transport((hostname, port))
+    try:
+        # Connexion au serveur SFTP
+        transport.connect(username=username, password=password)
+
+        # Créer une instance SFTP
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        # Changer de répertoire vers 'data'
+        sftp.chdir('data')
+
+        # Lister les fichiers dans le répertoire 'data'
+        file_list = [filename for filename in sftp.listdir() if filename.endswith('.txt')]
+    except paramiko.SSHException as e:
+        st.error(f"Erreur SSH : {e}")
+    except paramiko.SFTPError as e:
+        st.error(f"Erreur SFTP : {e}")
+    finally:
+        # Fermer la connexion SFTP et transport
+        sftp.close()
+        transport.close()
+
+    return file_list
+
+
+# Fonction pour lire le fichier .txt et extraire les points
+def lire_fichier_txt(_file):
+    points = []
+    lines = _file.readlines()
+    for i in range(0, len(lines), 7):  # Chaque point a 7 lignes de données
+        timestamp_reception = lines[i].strip()
+        timestamp_envoi = lines[i + 1].strip()
+        latitude = float(lines[i + 2].strip())
+        longitude = float(lines[i + 3].strip())
+        battery_level = float(lines[i + 4].strip())  # Niveau de batterie
+        reception_mode = int(lines[i + 5].strip())
+        info_alertes = lines[i + 6].strip()
+
+        # Calculer la différence entre l'heure de réception et l'heure d'envoi
+        reception_time = datetime.strptime(timestamp_reception, '%Y-%m-%dT%H:%M:%S')
+        envoi_time = datetime.strptime(timestamp_envoi, '%Y-%m-%dT%H:%M:%S')
+        diff = (reception_time - envoi_time).total_seconds()  # Différence en secondes
+
+        points.append((latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode,
+                       info_alertes, diff, reception_time))
+    return points
+
+
+# Fonction pour lire le fichier GPX et extraire les points
+@st.cache_data
+def lire_fichier_gpx(file):
+    points = []
+    gpx = gpxpy.parse(file)
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                points.append((point.latitude, point.longitude, point.elevation, point.time))
+    return points
+
+
+# Fonction pour générer et sauvegarder la carte en HTML
+def generer_carte(points_txt, points_gpx, position_slider, display_gsm=True, display_sat=True, display_buffer=True,
+                  display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
+                  color_rep_2='yellow', color_rep_3='orange', color_gpx='purple', diameter_gsm=2, diameter_sat=7,
+                  diameter_buffer=2, diameter_rep=5, diameter_gpx=2, buffer_threshold=120, date_debut=None,
+                  date_fin=None, filename="map.html"):
+    if not points_txt and not points_gpx:
+        return None
+
+    # Filtrer les points par date
+    if date_debut:
+        if points_txt:
+            points_txt = [p for p in points_txt if p[8] >= date_debut]
+        if points_gpx:
+            points_gpx = [p for p in points_gpx if p[3] >= date_debut]
+    if date_fin:
+        if points_txt:
+            points_txt = [p for p in points_txt if p[8] <= date_fin]
+        if points_gpx:
+            points_gpx = [p for p in points_gpx if p[3] <= date_fin]
+
+    # Initialiser les points pour centrer la carte
+    all_points = []
+    if points_txt:
+        all_points.extend([(p[0], p[1]) for p in points_txt])
+    if points_gpx:
+        all_points.extend([(p[0], p[1]) for p in points_gpx])
+
+    # Compter les points superposés
+    point_counts = {}
+    for point in points_txt:
+        lat_long = (point[0], point[1])
+        if lat_long not in point_counts:
+            point_counts[lat_long] = 0
+        point_counts[lat_long] += 1
+
+    # Créer une carte Folium avec des options de zoom personnalisées
+    m = folium.Map(location=[0, 0], zoom_start=2, control_scale=True, max_zoom=18, min_zoom=2, scrollWheelZoom=True)
+
+    # Ajouter les points TXT à la carte
+    if points_txt:
+        for i, point in enumerate(points_txt):
+            latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
+            # Déterminer le mode de réception et la couleur
+            color = None
+            radius = None
+            info = ""
+            if diff > buffer_threshold and display_buffer:
+                reception_mode_str = "BUFFER"
+                color = color_buffer
+                radius = diameter_buffer
+            elif reception_mode == 1 and display_gsm:
+                reception_mode_str = "GSM"
+                color = color_gsm
+                radius = diameter_gsm
+            elif reception_mode == 0 and display_sat:
+                reception_mode_str = "SAT"
+                color = color_sat
+                radius = diameter_sat
+            if i > 0 and (latitude, longitude) == (points_txt[i - 1][0], points_txt[i - 1][1]) and display_rep:
+                reception_mode_str = "REPIT"
+                count = point_counts[(latitude, longitude)]
+                if count == 2:
+                    color = color_rep_2
+                elif count > 2:
+                    color = color_rep_3
+                radius = diameter_rep
+                info = f"Nombre de points superposés: {count}<br>"
+            if color is not None:
+                # Ajouter un marqueur pour chaque point avec une infobulle
+                folium.CircleMarker(
+                    location=(latitude, longitude),
+                    radius=radius,
+                    color=color,
+                    fill=True,
+                    fill_color=color,
+                    popup=(
+                        f"Latitude: {latitude}<br>"
+                        f"Longitude: {longitude}<br>"
+                        f"Niveau de Batterie: {battery_level}<br>"
+                        f"Réception: {timestamp_reception}<br>"
+                        f"Envoi: {timestamp_envoi}<br>"
+                        f"Mode: {reception_mode_str}<br>"
+                        f"Différence: {diff} sec<br>"
+                        f"{info}"
+                        f"Alertes: {info_alertes}"
+                    ),
+                ).add_to(m)
+
+            # Ajouter des lignes entre les points
+            if i > 0:
+                previous_point = points_txt[i - 1]
+                previous_lat, previous_lon = previous_point[0], previous_point[1]
+                time_diff = (reception_time - previous_point[8]).total_seconds()
+                line_color = 'red' if time_diff > 90 else 'blue'
+                folium.PolyLine(
+                    locations=[(previous_lat, previous_lon), (latitude, longitude)],
+                    color=line_color
+                ).add_to(m)
+
+    # Ajouter les points GPX à la carte
+    if points_gpx:
+        for point in points_gpx:
+            latitude, longitude, elevation, time = point
+            folium.CircleMarker(
+                location=(latitude, longitude),
+                radius=diameter_gpx,
+                color=color_gpx,
+                fill=True,
+                fill_color=color_gpx,
+                popup=(
+                    f"Latitude: {latitude}<br>"
+                    f"Longitude: {longitude}<br>"
+                    f"Élévation: {elevation}<br>"
+                    f"Temps: {time}"
+                ),
+            ).add_to(m)
+
+    # Ajouter un curseur pour la position sélectionnée
+    total_points = len(all_points)
+    if total_points > 0 and position_slider < total_points:
+        cursor_point = all_points[position_slider]
+        folium.Marker(
+            location=cursor_point,
+            icon=folium.Icon(color='orange'),
+            popup="Curseur de position"
+        ).add_to(m)
+
+    # Centrer la carte sur les points importés
+    if all_points:
+        m.fit_bounds([(min(p[0] for p in all_points), min(p[1] for p in all_points)),
+                      (max(p[0] for p in all_points), max(p[1] for p in all_points))])
+
+    # Sauvegarder la carte en HTML
+    m.save(filename)
+
+    return points_txt, points_gpx
+
+
+# Fonction pour tracer la courbe de la batterie avec l'annotation et filtrer par date
+def tracer_courbe_batterie(points_txt, position_slider, date_debut=None, date_fin=None):
+    # Filtrer les points par date
+    if date_debut:
+        points_txt = [p for p in points_txt if p[8] >= date_debut]
+    if date_fin:
+        points_txt = [p for p in points_txt if p[8] <= date_fin]
+
+    df = {
+        "Temps": [p[8] for p in points_txt],
+        "Niveau de Batterie": [p[2] for p in points_txt]
+    }
+    fig = px.line(df, x="Temps", y="Niveau de Batterie", title="Niveau de Batterie en Fonction du Temps")
+
+    # Ajouter une annotation pour le point sélectionné
+    if position_slider < len(points_txt):
+        point = points_txt[position_slider]
+        fig.add_trace(go.Scatter(
+            x=[point[8]],
+            y=[point[2]],
+            mode='markers+text',
+            text=["<b>Curseur de position</b>"],
+            textposition="top center",
+            marker=dict(color='orange', size=10)
+        ))
+
+    # Fixer l'axe Y de 0 à 100%
+    fig.update_yaxes(range=[0, 100])
+
+    return fig
+
+
+# Configure la page
+st.set_page_config(page_title="Carte OSM avec Données TXT et GPX et Streamlit", layout="wide")
+
+# Titre de la page
+st.title("Carte OpenStreetMap avec Données TXT et GPX et Streamlit")
+
+# Utiliser les variables de session pour stocker les points
+if 'points_txt' not in st.session_state:
+    st.session_state.points_txt = None
+if 'points_gpx' not in st.session_state:
+    st.session_state.points_gpx = None
+if 'selected_txt_file' not in st.session_state:
+    st.session_state.selected_txt_file = None
+
+# Récupérer la liste des fichiers .txt disponibles via SFTP
+txt_files = get_txt_files_sftp()
+
+# Afficher la liste des fichiers .txt et permettre à l'utilisateur de sélectionner un fichier
+selected_txt_file = st.selectbox("Sélectionnez un fichier TXT", txt_files)
+
+# Forcer la mise à jour des points lorsqu'un nouveau fichier est sélectionné
+if selected_txt_file and selected_txt_file != st.session_state.selected_txt_file:
+    st.session_state.selected_txt_file = selected_txt_file
+    transport = paramiko.Transport((hostname, port))
+    transport.connect(username=username, password=password)
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    with sftp.file(f"data/{selected_txt_file}", mode='r') as file:
+        st.session_state.points_txt = lire_fichier_txt(file)
+    sftp.close()
+    transport.close()
+
+# Autorefresh toutes les 30 secondes
+st_autorefresh(interval=30 * 1000, key="datarefresh")
+
+# Recharger les données du fichier TXT sélectionné
+if selected_txt_file:
+    transport = paramiko.Transport((hostname, port))
+    transport.connect(username=username, password=password)
+    sftp = paramiko.SFTPClient.from_transport(transport)
+    with sftp.file(f"data/{selected_txt_file}", mode='r') as file:
+        st.session_state.points_txt = lire_fichier_txt(file)
+    sftp.close()
+    transport.close()
+
+# Chargement du fichier GPX si téléchargé
+uploaded_file_gpx = st.file_uploader("Télécharger un fichier GPX", type="gpx")
+
+if uploaded_file_gpx is not None:
+    st.session_state.points_gpx = lire_fichier_gpx(uploaded_file_gpx)
+
+# Vérifier s'il y a des points à afficher
+if st.session_state.points_txt is not None or st.session_state.points_gpx is not None:
+    # Options d'affichage
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        display_gsm = st.checkbox("Afficher les points GSM", value=True)
+        display_sat = st.checkbox("Afficher les points SAT", value=True)
+        display_buffer = st.checkbox("Afficher les points BUFFER", value=True)
+        display_rep = st.checkbox("Afficher les points REPIT", value=True)  # Ajout du point REPIT
+        display_gpx = st.checkbox("Afficher les points GPX", value=True)
+
+    with col2:
+        color_gsm = st.color_picker("Couleur pour GSM", "#0000ff")
+        color_sat = st.color_picker("Couleur pour SAT", "#ff0000")
+        color_buffer = st.color_picker("Couleur pour BUFFER", "#00ff00")
+        color_rep_2 = st.color_picker("Couleur pour REPIT (2 points)", "#ffff00")  # Couleur pour REPIT (2 points)
+        color_rep_3 = st.color_picker("Couleur pour REPIT (>2 points)", "#ffA500")  # Couleur pour REPIT (>2 points)
+        color_gpx = st.color_picker("Couleur pour GPX", "#800080")
+
+    with col3:
+        diameter_gsm = st.slider("Diamètre pour GSM", min_value=1, max_value=10, value=2)
+        diameter_sat = st.slider("Diamètre pour SAT", min_value=1, max_value=10, value=7)
+        diameter_buffer = st.slider("Diamètre pour BUFFER", min_value=1, max_value=10, value=2)
+        diameter_rep = st.slider("Diamètre pour REPIT", min_value=1, max_value=10, value=5)  # Diamètre pour REPIT
+        diameter_gpx = st.slider("Diamètre pour GPX", min_value=1, max_value=10, value=2)
+
+    # Définir le seuil de différence pour BUFFER
+    buffer_threshold = st.number_input("Seuil de différence (en secondes) pour BUFFER", min_value=0, value=120)
+
+    # Sélecteurs de date et heure pour filtrer les points
+    date_debut_date = st.date_input("Date de début", value=default_start_date.date())
+    date_debut_time = st.time_input("Heure de début", value=default_start_date.time())
+    date_fin_date = st.date_input("Date de fin", value=default_end_date.date())
+    date_fin_time = st.time_input("Heure de fin", value=default_end_date.time())
+
+    # Combine les dates et les heures en objets datetime
+    date_debut = datetime.combine(date_debut_date, date_debut_time)
+    date_fin = datetime.combine(date_fin_date, date_fin_time)
+
+    # Vérifier si les listes ne sont pas None avant de calculer leur longueur
+    points_txt_length = len(st.session_state.points_txt) if st.session_state.points_txt else 0
+    points_gpx_length = len(st.session_state.points_gpx) if st.session_state.points_gpx else 0
+    total_points = points_txt_length + points_gpx_length
+
+    # Curseur pour naviguer parmi les points
+    position_slider = st.slider("Naviguer parmi les points", min_value=0,
+                                max_value=total_points - 1 if total_points > 0 else 0, value=0)
+
+    # Génération de la carte avec les points et sauvegarde en HTML
+    points_txt, points_gpx = generer_carte(
+        st.session_state.points_txt, st.session_state.points_gpx, position_slider, display_gsm, display_sat,
+        display_buffer, display_rep,  # Ajouter display_rep ici
+        color_gsm, color_sat, color_buffer, color_rep_2, color_rep_3, color_gpx,  # Ajouter color_rep ici
+        diameter_gsm, diameter_sat, diameter_buffer, diameter_rep, diameter_gpx,  # Ajouter diameter_rep ici
+        buffer_threshold, date_debut, date_fin, filename="map.html"
+    )
+
+    # Afficher la carte dans un iframe
+    st.markdown("<h3>Carte Générée</h3>", unsafe_allow_html=True)
+    html_file = open("map.html", 'r', encoding='utf-8')
+    source_code = html_file.read()
+    html_file.close()
+    html(source_code, height=600)
+
+    # Tracer la courbe de la batterie avec l'annotation
+    if st.session_state.points_txt:
+        fig = tracer_courbe_batterie(st.session_state.points_txt, position_slider, date_debut, date_fin)
+        st.plotly_chart(fig)
+else:
+    st.info("Veuillez télécharger un fichier TXT ou GPX.")
