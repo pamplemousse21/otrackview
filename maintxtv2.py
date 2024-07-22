@@ -130,8 +130,7 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
-def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filename1=None, filename2=None,
-                  display_gsm=True, display_sat=True, display_buffer=True,
+def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filename1=None, filename2=None, display_gsm=True, display_sat=True, display_buffer=True,
                   display_rep=True, color_gsm='blue', color_sat='red', color_buffer='green',
                   color_rep_2='yellow', color_rep_3='orange', color_gpx='purple', diameter_gsm=2, diameter_sat=7,
                   diameter_buffer=2, diameter_rep=5, diameter_gpx=2, buffer_threshold=120, date_debut=None,
@@ -166,7 +165,7 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
 
     # Compter les points superposés
     point_counts = {}
-    for point in points_txt1 + points_txt2:
+    for point in (points_txt1 or []) + (points_txt2 or []):  # Utiliser une liste vide si None
         lat_long = (point[0], point[1])
         if lat_long not in point_counts:
             point_counts[lat_long] = 0
@@ -300,7 +299,6 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
 
     return points_txt1, points_txt2, points_gpx
 
-
 # Fonction pour tracer la courbe de la batterie avec l'annotation et filtrer par date
 def tracer_courbe_batterie(points_txt, position_slider, date_debut=None, date_fin=None):
     # Filtrer les points par date
@@ -331,7 +329,6 @@ def tracer_courbe_batterie(points_txt, position_slider, date_debut=None, date_fi
     fig.update_yaxes(range=[0, 100])
 
     return fig
-
 
 # Configure la page
 st.set_page_config(page_title="Carte OSM avec Données TXT et GPX et Streamlit", layout="wide")
