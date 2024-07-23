@@ -522,6 +522,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
         st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.0f}**")
         st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100:.1f}** %")
-
+        st.markdown(f"- Couverture reseau GSM : **{counts2['GSM']/(counts2['SAT']+counts2['BUFFER']+counts2['GSM'])}**")
+        st.markdown(f"- Couverture reseau SAT : **{counts2['SAT'] / (counts2['SAT'] + counts2['BUFFER'] + counts2['GSM'])}**")
 else:
     st.info("Veuillez télécharger un fichier TXT ou GPX.")
