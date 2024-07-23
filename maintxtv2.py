@@ -125,8 +125,9 @@ def compter_points_par_type(points_txt, date_debut=None, date_fin=None):
                 counts["REPIT_3"] += 1
 
     last_point_time = points_txt[-1][8] if points_txt else None
+    first_point_time = points_txt[0][8] if points_txt else None
 
-    return counts, last_point_time
+    return counts, first_point_time, last_point_time
 
 
 # Fonction pour générer et sauvegarder la carte en HTML
@@ -495,8 +496,9 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
 
     # Afficher les statistiques en bas de la page
     if st.session_state.points_txt1:
-        counts1, last_point_time1 = compter_points_par_type(st.session_state.points_txt1, date_debut, date_fin)
+        counts1,first_point_time1, last_point_time1,  = compter_points_par_type(st.session_state.points_txt1, date_debut, date_fin)
         minutes_ecoulees1 = calculer_minutes_ecoulees(date_debut, last_point_time1)
+        minutes_ecouleesfirstpoint1 = calculer_minutes_ecoulees(first_point_time1, last_point_time1)
         points_perdus1 = calculer_points_perdus(minutes_ecoulees1, points_txt1_length)
         st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[0]}")
         st.markdown(f"- Nombre de points GSM : **{counts1['GSM']}**")
@@ -506,13 +508,15 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts1['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time1}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees1:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)):.0f}**")
-        st.markdown(f"- perte (%) : **{(minutes_ecoulees1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)))/minutes_ecoulees1*100:.1f}** %")
+        st.markdown(f"- Minutes écoulées depuis le premier moint affiché : **{minutes_ecouleesfirstpoint1:.2f}**")  ####
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecouleesfirstpoint1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)):.0f}**")
+        st.markdown(f"- perte (%) : **{(minutes_ecouleesfirstpoint1 - (counts1['SAT'] + counts1['GSM'] + (counts1['REPIT_2'] / 2) + (counts1['REPIT_3'] / 3)))/minutes_ecouleesfirstpoint1*100:.1f}** %")
     st.markdown(f"- Couverture reseau GSM : **{counts1['GSM'] / (counts1['SAT'] + counts1['BUFFER'] + counts1['GSM'])}**")
     st.markdown(f"- Couverture reseau SAT : **{counts1['SAT'] / (counts1['SAT'] + counts1['BUFFER'] + counts1['GSM'])}**")
     if st.session_state.points_txt2:
-        counts2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
+        counts2,first_point_time2, last_point_time2 = compter_points_par_type(st.session_state.points_txt2, date_debut, date_fin)
         minutes_ecoulees2 = calculer_minutes_ecoulees(date_debut, last_point_time2)
+        minutes_ecouleesfirstpoint2 = calculer_minutes_ecoulees(first_point_time2, last_point_time2)
         points_perdus2 = calculer_points_perdus(minutes_ecoulees2, points_txt2_length)
         st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[1]}")
         st.markdown(f"- Nombre de points GSM : **{counts2['GSM']}**")
@@ -522,8 +526,9 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         st.markdown(f"- Nombre de points REPIT (>2 points) : **{counts2['REPIT_3']}**")
         st.markdown(f"- Heure du dernier point : **{last_point_time2}**")
         st.markdown(f"- Minutes écoulées depuis le début : **{minutes_ecoulees2:.2f}**")
-        st.markdown(f"- Nombre de points perdus : **{minutes_ecoulees2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.0f}**")
-        st.markdown(f"- perte (%) : **{(minutes_ecoulees2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecoulees2 * 100:.1f}** %")
+        st.markdown(f"- Minutes écoulées depuis le premier moint affiché : **{minutes_ecouleesfirstpoint2:.2f}**")####
+        st.markdown(f"- Nombre de points perdus : **{minutes_ecouleesfirstpoint2-(counts2['SAT']+counts2['GSM']+(counts2['REPIT_2']/2)+(counts2['REPIT_3']/3)):.0f}**")
+        st.markdown(f"- perte (%) : **{(minutes_ecouleesfirstpoint2 - (counts2['SAT'] + counts2['GSM'] + (counts2['REPIT_2'] / 2) + (counts2['REPIT_3'] / 3))) / minutes_ecouleesfirstpoint2 * 100:.1f}** %")
         st.markdown(f"- Couverture reseau GSM : **{counts2['GSM']/(counts2['SAT']+counts2['BUFFER']+counts2['GSM'])}**")
         st.markdown(f"- Couverture reseau SAT : **{counts2['SAT'] / (counts2['SAT'] + counts2['BUFFER'] + counts2['GSM'])}**")
 else:
