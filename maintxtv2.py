@@ -518,7 +518,7 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
         minutes_ecoulees2 = calculer_minutes_ecoulees(date_debut, last_point_time2)
         minutes_ecouleesfirstpoint2 = calculer_minutes_ecoulees(first_point_time2, last_point_time2)
         points_perdus2 = calculer_points_perdus(minutes_ecoulees2, points_txt2_length)
-        st.markdown(f"### Statistiques des Points du Fichier {selected_txt_files[1]}")
+        st.markdown(f"### Statistiques des Points du Fichier V3 {selected_txt_files[1]}")
         st.markdown(f"- Nombre de points GSM : **{counts2['GSM']}**")
         st.markdown(f"- Nombre de points SAT : **{counts2['SAT']}**")
         st.markdown(f"- Nombre de points BUFFER : **{counts2['BUFFER']}**")
