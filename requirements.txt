@@ -4,3 +4,5 @@ plotly
 gpxpy
 paramiko
 streamlit-autorefresh
+pandas
+pyvisa
