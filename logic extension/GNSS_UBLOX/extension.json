@@ -1,0 +1,19 @@
+{
+  "name": "GNSS_UBLOX",
+  "apiVersion": "1.0.0",
+  "author": "shy coder",
+  "version": "0.0.1",
+  "description": "",
+  "extensions": {
+    "GNSS_UBLOX": {
+      "type": "DigitalMeasurement",
+      "entryPoint": "DigitalMeasurement.MyDigitalMeasurer",
+      "metrics": {
+        "metricKey": {
+          "name": "<metric_name>",
+          "notation": "<short_notation>"
+        }
+      }
+    }
+  }
+}
