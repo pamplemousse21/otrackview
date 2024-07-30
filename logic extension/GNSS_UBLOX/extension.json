@@ -1,7 +1,7 @@
 {
-  "name": "GNSS_UBLOX",
+  "name": "GNSS_UBLOX_kevin",
   "apiVersion": "1.0.0",
-  "author": "shy coder",
+  "author": "kevin guiot",
   "version": "0.0.1",
   "description": "",
   "extensions": {
@@ -10,7 +10,7 @@
       "entryPoint": "DigitalMeasurement.MyDigitalMeasurer",
       "metrics": {
         "metricKey": {
-          "name": "<metric_name>",
+          "name": "<GNSS_DATA>",
           "notation": "<short_notation>"
         }
       }
