@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from streamlit.components.v1 import html
 import paramiko
 from streamlit_autorefresh import st_autorefresh
+import pandas as pd
+
+
 
 # Définir les valeurs par défaut pour la date et l'heure de filtrage
 default_start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -331,6 +334,74 @@ def tracer_courbe_batterie(points_txt, position_slider, date_debut=None, date_fi
 
     return fig
 
+def points_to_dataframe(points_txt, date_debut=None, date_fin=None):
+    # Filtrer les points par date
+    if date_debut:
+        points_txt = [p for p in points_txt if p[8] >= date_debut]
+    if date_fin:
+        points_txt = [p for p in points_txt if p[8] <= date_fin]
+
+    df = pd.DataFrame({
+        "Latitude": [p[0] for p in points_txt],
+        "Longitude": [p[1] for p in points_txt],
+        "Niveau de Batterie": [p[2] for p in points_txt],
+        "Timestamp Reception": [datetime.strptime(p[3], '%Y-%m-%dT%H:%M:%S') + timedelta(hours=2) for p in points_txt],
+        "Timestamp Envoi": [datetime.strptime(p[4], '%Y-%m-%dT%H:%M:%S') + timedelta(hours=2) for p in points_txt],
+        "Mode Reception": [p[5] for p in points_txt],
+        "Info Alertes": [p[6] for p in points_txt],  # Ajouter la colonne Info Alertes
+        "Diff": [p[7] for p in points_txt],
+        "Reception Time": [p[8] + timedelta(hours=2) for p in points_txt],
+    })
+    return df
+
+def tracer_courbe_alertes(points_txt, position_slider, date_debut=None, date_fin=None):
+    # Filtrer les points par date
+    if date_debut:
+        points_txt = [p for p in points_txt if p[8] >= date_debut]
+    if date_fin:
+        points_txt = [p for p in points_txt if p[8] <= date_fin]
+
+    df = {
+        "Temps": [p[8] for p in points_txt],
+        "Info Alertes": [p[6] for p in points_txt],
+        "Latitude": [p[0] for p in points_txt],
+        "Longitude": [p[1] for p in points_txt],
+        "Niveau de Batterie": [p[2] for p in points_txt],
+        "Timestamp Reception": [p[3] for p in points_txt],
+        "Timestamp Envoi": [p[4] for p in points_txt],
+        "Mode Reception": [p[5] for p in points_txt]
+    }
+
+    fig = px.line(
+        df,
+        x="Temps",
+        y="Info Alertes",
+        title="Valeur des Alertes en Fonction du Temps",
+        hover_data={
+            "Temps": "|%Y-%m-%d %H:%M:%S",
+            "Info Alertes": True,
+            "Latitude": True,
+            "Longitude": True,
+            "Niveau de Batterie": True,
+            "Timestamp Reception": True,
+            "Timestamp Envoi": True,
+            "Mode Reception": True,
+        }
+    )
+
+    # Ajouter une annotation pour le point sélectionné
+    if position_slider < len(points_txt):
+        point = points_txt[position_slider]
+        fig.add_trace(go.Scatter(
+            x=[point[8]],
+            y=[point[6]],
+            mode='markers+text',
+            text=["<b>Curseur de position</b>"],
+            textposition="top center",
+            marker=dict(color='orange', size=10)
+        ))
+
+    return fig
 def calculer_minutes_ecoulees(date_debut, date_fin):
     return (date_fin - date_debut).total_seconds() / 60
 
@@ -490,9 +561,32 @@ if st.session_state.points_txt1 is not None or st.session_state.points_txt2 is n
     if st.session_state.points_txt1:
         fig1 = tracer_courbe_batterie(st.session_state.points_txt1, position_slider, date_debut, date_fin)
         st.plotly_chart(fig1)
+        df_batterie1 = points_to_dataframe(st.session_state.points_txt1, date_debut, date_fin)
+        csv_batterie1 = df_batterie1.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Télécharger la courbe de batterie (Fichier 1) en CSV",
+            data=csv_batterie1,
+            file_name=f'courbe_batterie_{selected_txt_files[0]}.csv',
+            mime='text/csv',
+        )
+
+        fig_alertes1 = tracer_courbe_alertes(st.session_state.points_txt1, position_slider, date_debut, date_fin)
+        st.plotly_chart(fig_alertes1)
+
     if st.session_state.points_txt2:
         fig2 = tracer_courbe_batterie(st.session_state.points_txt2, position_slider, date_debut, date_fin)
         st.plotly_chart(fig2)
+        df_batterie2 = points_to_dataframe(st.session_state.points_txt2, date_debut, date_fin)
+        csv_batterie2 = df_batterie2.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Télécharger la courbe de batterie (Fichier 2) en CSV",
+            data=csv_batterie2,
+            file_name=f'courbe_batterie_{selected_txt_files[1]}.csv',
+            mime='text/csv',
+        )
+
+        fig_alertes2 = tracer_courbe_alertes(st.session_state.points_txt2, position_slider, date_debut, date_fin)
+        st.plotly_chart(fig_alertes2)
 
     # Afficher les statistiques en bas de la page
     if st.session_state.points_txt1:
