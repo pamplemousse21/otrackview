@@ -179,10 +179,16 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
     m = folium.Map(location=[0, 0], zoom_start=2, control_scale=True, max_zoom=18, min_zoom=2, scrollWheelZoom=True)
 
     # Fonction pour ajouter des points à la carte
+    # Fonction pour ajouter des points à la carte
     def ajouter_points(points_txt, couleur, diametre, fichier=None):
         if points_txt:
+            # Trier les points par envoi_time
+            points_txt = sorted(points_txt, key=lambda x: datetime.strptime(x[4], '%Y-%m-%dT%H:%M:%S'))
             for i, point in enumerate(points_txt):
                 latitude, longitude, battery_level, timestamp_reception, timestamp_envoi, reception_mode, info_alertes, diff, reception_time = point
+                # Définir envoi_time correctement
+                envoi_time = datetime.strptime(timestamp_envoi, '%Y-%m-%dT%H:%M:%S')
+
                 # Déterminer le mode de réception et la couleur
                 color = None
                 radius = None
@@ -230,11 +236,13 @@ def generer_carte(points_txt1, points_txt2, points_gpx, position_slider, filenam
                         ),
                     ).add_to(m)
 
+
+
                 # Ajouter des lignes entre les points
                 if i > 0:
                     previous_point = points_txt[i - 1]
                     previous_lat, previous_lon = previous_point[0], previous_point[1]
-                    time_diff = (reception_time - previous_point[8]).total_seconds()
+                    time_diff = (envoi_time - datetime.strptime(previous_point[4], '%Y-%m-%dT%H:%M:%S')).total_seconds()
                     line_color = 'red' if time_diff > 200 else 'blue'
                     folium.PolyLine(
                         locations=[(previous_lat, previous_lon), (latitude, longitude)],
